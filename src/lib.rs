@@ -272,11 +272,7 @@ impl PkgConfig {
         let mut cfg = Self::default();
         cfg.set_variable_escaped(
             "pcfiledir",
-            path.canonicalize()?
-                .parent()
-                .unwrap()
-                .as_os_str()
-                .as_bytes()?,
+            path.parent().unwrap().as_os_str().as_bytes()?,
             true,
         );
         cfg.extend_from_bytes(&fs::read(path)?)?;
