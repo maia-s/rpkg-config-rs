@@ -346,6 +346,20 @@ impl PkgConfig {
         })
     }
 
+    pub fn libs_with_private(
+        &self,
+        include_private: bool,
+    ) -> Result<impl FusedIterator<Item = Link>, VariableError> {
+        Ok(self.libs()?.chain(Links {
+            split: if include_private {
+                self.key_bytes_expanded_unescaped_split("Libs.private")?
+                    .unwrap_or(UnescapeAndSplit::new(b""))
+            } else {
+                UnescapeAndSplit::new(b"")
+            },
+        }))
+    }
+
     /// Get a variable
     pub fn variable(&self, var: impl AsRef<[u8]>) -> Option<&[u8]> {
         self.variables.get(var.as_ref()).map(|v| v as &[u8])
@@ -490,6 +504,8 @@ impl UnescapeAndSplit {
     }
 }
 
+impl FusedIterator for UnescapeAndSplit {}
+
 impl Iterator for UnescapeAndSplit {
     type Item = Vec<u8>;
 
@@ -553,12 +569,12 @@ impl Iterator for UnescapeAndSplit {
     }
 }
 
-impl FusedIterator for UnescapeAndSplit {}
-
 /// Iterator over items in `Libs` or `Libs.private`
 pub struct Links {
     split: UnescapeAndSplit,
 }
+
+impl FusedIterator for Links {}
 
 impl Iterator for Links {
     type Item = Link;

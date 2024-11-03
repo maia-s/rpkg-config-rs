@@ -1,5 +1,5 @@
 use crate::{Link, PkgConfig};
-use std::error::Error;
+use std::{error::Error, str::FromStr};
 
 #[test]
 fn libs() -> Result<(), Box<dyn Error>> {
@@ -86,5 +86,51 @@ Libs: -L${libdir} -llib -F/Library/Frameworks -framework Fw1 -Wl,-framework,Fw2 
     assert_eq!(rpath, 2);
     assert_eq!(verbatim, 1);
 
+    Ok(())
+}
+
+#[test]
+fn libs_with_private() -> Result<(), Box<dyn Error>> {
+    let abcd = PkgConfig::from_str("Libs: -la -lb\nLibs.private: -lc -ld\n")?;
+    for (link, cmp) in abcd.libs_with_private(true)?.zip(["a", "b", "c", "d", "?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
+    for (link, cmp) in abcd.libs_with_private(false)?.zip(["a", "b", "?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
+
+    let ab = PkgConfig::from_str("Libs: -la -lb\n")?;
+    for (link, cmp) in ab.libs_with_private(true)?.zip(["a", "b", "?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
+    for (link, cmp) in ab.libs_with_private(false)?.zip(["a", "b", "?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
+
+    let cd = PkgConfig::from_str("Libs.private: -lc -ld\n")?;
+    for (link, cmp) in cd.libs_with_private(true)?.zip(["c", "d", "?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
+    for (link, cmp) in cd.libs_with_private(false)?.zip(["?"]) {
+        let Link::Lib(path) = link else {
+            panic!();
+        };
+        assert_eq!(path.to_str(), Some(cmp));
+    }
     Ok(())
 }
